@@ -1,0 +1,12 @@
+[Unit]
+Description=Control touchscreen and amp power, brightness, etc.
+After=local-fs.target time-sync.target
+Wants=time-sync.target
+
+[Service]
+ExecStart=/usr/bin/env python3 /usr/local/bin/sun_brightness.py --config /etc/sunbrightness.ini
+User=dan
+Nice=5
+
+[Install]
+WantedBy=multi-user.target
