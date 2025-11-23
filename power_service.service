@@ -1,12 +1,28 @@
 [Unit]
 Description=Control touchscreen and amp power, brightness, etc.
+Documentation=man:systemd.service(5)
+
 After=local-fs.target time-sync.target
 Wants=time-sync.target
 
 [Service]
-ExecStart=/usr/bin/env python3 /usr/local/bin/sun_brightness.py --config /etc/sunbrightness.ini
+Type=simple
+ExecStart=/home/dan/git/taco_hu/power_service.py
 User=dan
+Group=dan
 Nice=5
+
+KillSignal=SIGINT
+TimeoutStopSec=10
+
+SyslogIdentifier=power_service
+
+# --- RELIABILITY ---
+Restart=on-failure
+RestartSec=2s
+# Backoff protection: if it crashes repeatedly, avoid flapping forever.
+StartLimitIntervalSec=60
+StartLimitBurst=10
 
 [Install]
 WantedBy=multi-user.target

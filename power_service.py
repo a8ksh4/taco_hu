@@ -20,6 +20,7 @@ import logging
 import signal
 import sys
 import time
+from datetime import datetime as dt
 
 
 ACC_PIN = 4
@@ -42,7 +43,7 @@ def sigint_handler(signal, frame):
     LOG.warning("Caught Ctrl C")
     SIGINT_CAUGHT = True
 
-signal.signal(signal.SIGINT, sigint_handler)
+
 
 def get_logger():
     '''Get a logger that writes to a file and stdout.'''
@@ -59,6 +60,13 @@ def get_logger():
     ch.setFormatter(formatter)
     logger.addHandler(ch)
     return logger
+
+
+def get_sunrise_sunset_times():
+    today = dt.today()
+    isocal = today.isocalendar()
+    day_num = isocal.week * 7 + isocal.weekday
+    return (7, 16.45)
 
 
 def set_brightness(value):
@@ -121,6 +129,8 @@ def main():
 
 if __name__ == '__main__':
     LOG = get_logger()
+    signal.signal(signal.SIGINT, sigint_handler)
+
     try:
         main()
     except Exception as e:
