@@ -18,16 +18,16 @@ sp.call(['sudo', 'modprobe', 'uinput'])
 sp.call(['sudo', 'chown', 'dan', '/dev/uinput'])
 
 BL_PATH = '/sys/class/backlight/11-0045'
-BUTTONS_PINS = [16, 26, 21, 20, 19, 13, 6]
+BUTTONS_PINS = [6, 19, 13, 20, 21, 16, 26]
 BUTTONS = [Button(p, pull_up=True, bounce_time=0.05) for p in BUTTONS_PINS]
-NAMES = ['vl_up', 'vl_dn', 'br_dn', 'br_up', 'mute', 'esc', 'play']
-HU_ACTIONS = ['output_volume_up',
-              'output_volume_down',
-              'display_brightness_down',
+NAMES = ['play', 'esc', 'mute', 'br_up', 'br_dn', 'vl_up', 'vl_dn']
+HU_ACTIONS = ['now_playing_toggle_play',
+              'equalizer_preset_settings',
+              'go_back',
               'display_brightness_up',
-              'output_mute_toggle',
-              'keyboard_escape',
-              'media_play_pause']
+              'display_brightness_down',
+              'output_volume_up',
+              'output_volume_down']
 
 
 def get_press_func(pin, name, client, actionstr):
