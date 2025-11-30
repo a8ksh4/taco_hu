@@ -3,6 +3,10 @@
 import uinput
 from gpiozero import Button
 from signal import pause
+import subprocess as sp
+
+sp.call(['sudo', 'modprobe', 'uinput'])
+sp.call(['sudo', 'chown', 'dan', '/dev/uinput'])
 
 BUTTONS_PINS = [16, 26, 21, 20, 19, 13, 6]
 BUTTONS = [Button(p, pull_up=True, bounce_time=0.05) for p in BUTTONS_PINS]
