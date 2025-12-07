@@ -7,7 +7,8 @@ Wants=time-sync.target
 
 [Service]
 Type=simple
-ExecStart=/home/dan/git/taco_hu/taco_truck.py
+WorkingDirectory=/home/dan/git/taco_hu
+ExecStart=/usr/bin/python3 /home/dan/git/taco_hu/taco_truck.py
 User=dan
 Group=dan
 Nice=5
@@ -16,6 +17,8 @@ KillSignal=SIGINT
 TimeoutStopSec=10
 
 SyslogIdentifier=taco_truck
+StandardOutput=file:/home/dan/git/taco_hu/taco_service_stdout.log
+StandardError=file:/home/dan/git/taco_hu/taco_service_stderr.log
 
 # --- RELIABILITY ---
 Restart=on-failure
