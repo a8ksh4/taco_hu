@@ -21,12 +21,13 @@ import common.Api_pb2 as hudiy_api
 from common.Client import Client, ClientEventHandler
 # import serial
 # import subprocess
+import fcntl
 import logging
 import os
 import threading
 # from collections import deque
 import time
-from gpiozero import Button
+from gpiozero import Button, OutputDevice, InputDevice
 from signal import pause
 import subprocess as sp
 
@@ -36,7 +37,12 @@ import subprocess as sp
 BL_PATH = '/sys/class/backlight/11-0045'
 
 ACC_PIN = 4  # GPIO pin connected to optocopuple for car ACC line
+ACC = InputDevice(ACC_PIN, pull_up=True)  # , bounce_time=0.05)  # pulled high, goes low when ACC on
 AMP_PIN = 11  # GPIO connected to relay to switch amp on/off
+AMP = OutputDevice(AMP_PIN, active_high=True, initial_value=False)
+
+BUTTON_PRESSED = False  # Tracker that lets us activate display for period of time on button press
+BUTTON_TIMEOUT = 15  # five minutes
 
 # GPIO Pins that have buttons connected
 # Buttons should connect to ground and a gpio.  
@@ -56,8 +62,8 @@ HU_ACTIONS = ['now_playing_toggle_play',
               'output_volume_down']
 
 MY_DIR = '/home/dan/git/taco_hu'
-LOG_FILE = f'{MY_DIR}/buttons.log'
-MUTEX_FILE = f'{MY_DIR}/buttons.mutex'
+LOG_FILE = f'{MY_DIR}/taco_truck.log'
+MUTEX_FILE = f'{MY_DIR}/taco_truck.mutex'
 
 # For clean exit when we kill the service
 SIGINT_CAUGHT = False
@@ -69,7 +75,7 @@ def sigint_handler(signal, frame):
 
 def get_logger():
     '''Get a logger that writes to a file and stdout.'''
-    logger = logging.getLogger('taco_buttons')
+    logger = logging.getLogger('taco_truck')
     logger.setLevel(logging.DEBUG)
     format_str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     formatter = logging.Formatter(format_str)
@@ -88,18 +94,38 @@ def get_press_func(pin, name, client, actionstr):
     '''Generate on_press function for button'''
     if actionstr == 'display_brightness_up':
         def on_press():
+            global BUTTON_PRESSED
+            BUTTON_PRESSED = True
             print("pressed:", pin, name, actionstr)
             change_brightness(up=True)
     elif actionstr == 'display_brightness_down':
         def on_press():
+            global BUTTON_PRESSED
+            BUTTON_PRESSED = True
             print("pressed:", pin, name, actionstr)
             change_brightness(up=False)
     else:
         def on_press():
+            global BUTTON_PRESSED
+            BUTTON_PRESSED = True
             print("pressed:", pin, name, actionstr)
             trigger_action(client, actionstr)
 
     return on_press
+
+
+def display_power(on=True):
+    '''Turns the lcd display on or off'''
+    # /sys/class/backlight/11-0045/bl_power
+    power_file = f'{BL_PATH}/bl_power'
+    with open(power_file, 'w', encoding='utf-8') as pf:
+        if on:
+            pf.write('0')  # 0 is on
+            print("[INFO] Display powered ON")
+        else:
+            pf.write('4')  # 4 is off
+            print("[INFO] Display powered OFF")
+
 
 
 def change_brightness(up=True):
@@ -161,6 +187,8 @@ def hudiy_listener(client):
 
 def main():
     '''Main function'''
+    global BUTTON_PRESSED
+
     # Connection to hudiy
     client = Client("HUDIY Discovery II")
     event_handler = EventHandler()
@@ -172,16 +200,66 @@ def main():
     for pin, butt, name, action in zip(BUTTONS_PINS, BUTTONS, NAMES, HU_ACTIONS):
         butt.when_pressed = get_press_func(pin, name, client, action)
 
-    print("Waiting for button presses...")
+    print("Main loop starting...")
+    button_timer = 0 # in seconds
+    acc_last_state = ACC.is_active
     while True:
+        # Button presses happen in the background
+        if BUTTON_PRESSED:
+            LOG.info("Button pressed, setting button timer")
+            button_timer = time.time()
+            BUTTON_PRESSED = False
+
+        # Button timers reset on acc change so turning car off takes effect immediately
+        if ACC.is_active != acc_last_state:
+            LOG.info("ACC state changed, clearing button timer")
+            button_timer = 0  # reset timer on acc change
+        acc_last_state = ACC.is_active
+
+        # Check button timeout to turn stuff on if 
+        if time.time() - button_timer < BUTTON_TIMEOUT:
+            if not AMP.value:
+                LOG.info("Turning on based on button activity")
+                display_power(on=True)
+                AMP.on()
+
+        # Check ACC status and do stuff!
+        elif not ACC.is_active:
+            if AMP.value:
+                LOG.info("ACC off, turning amp off")
+                AMP.off()
+
+                # Send audio stop action to hudiy
+                trigger_action(client, 'now_playing_stop')
+
+                display_power(on=False)
+    
+        else:  # Truck is on
+            if not AMP.value:
+                LOG.info("ACC on, turning amp on")
+                AMP.on()
+                display_power(on=True)
+
+        # Sigint stuff for clean exit
         if SIGINT_CAUGHT:
             break
-        pause()  # presum sigint caught will break this
+
+        # pause()  # presum sigint caught will break this
+        time.sleep(1)
+
     client.disconnect()
 
 
 if __name__ == "__main__":
     LOG = get_logger()
+
+    # Get mutex to prevent multiple instances
+    with open(MUTEX_FILE, 'w') as mf:
+        try:
+            fcntl.flock(mf, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
+            LOG.error("Another instance is running, exiting")
+            exit(1)
 
     # # Check if uinput module is loaded or load it
     # if not os.path.exists('/dev/uinput'):

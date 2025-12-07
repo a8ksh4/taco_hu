@@ -1,5 +1,5 @@
 [Unit]
-Description=Control touchscreen and amp power, brightness, etc.
+Description=Control buttons, touchscreen and amp power, brightness, etc.
 Documentation=man:systemd.service(5)
 
 After=local-fs.target time-sync.target
@@ -7,7 +7,7 @@ Wants=time-sync.target
 
 [Service]
 Type=simple
-ExecStart=/home/dan/git/taco_hu/power_service.py
+ExecStart=/home/dan/git/taco_hu/taco_truck.py
 User=dan
 Group=dan
 Nice=5
@@ -15,13 +15,13 @@ Nice=5
 KillSignal=SIGINT
 TimeoutStopSec=10
 
-SyslogIdentifier=power_service
+SyslogIdentifier=taco_truck
 
 # --- RELIABILITY ---
 Restart=on-failure
 RestartSec=2s
 # Backoff protection: if it crashes repeatedly, avoid flapping forever.
-StartLimitIntervalSec=60
+# StartLimitIntervalSec=60
 StartLimitBurst=10
 
 [Install]

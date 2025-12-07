@@ -70,4 +70,7 @@ Customization and setup tools for hudiy in my taco.
     >>> amp_line.set_value(1)
     >>> amp_line.set_value(0)
     >>> 
-    
+
+# Adding a system service
+    dan@taco:~ $ sudo ln -s /home/dan/git/taco_hu/taco_truck.service /etc/systemd/system/
+    dan@taco:~ $ sudo systemctl enable taco_truck.service
