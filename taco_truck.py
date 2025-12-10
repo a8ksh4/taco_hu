@@ -42,14 +42,16 @@ AMP_PIN = 11  # GPIO connected to relay to switch amp on/off
 AMP = OutputDevice(AMP_PIN, active_high=True, initial_value=False)
 
 BUTTON_PRESSED = False  # Tracker that lets us activate display for period of time on button press
-BUTTON_TIMEOUT = 60*5 # five minutes
+BUTTON_TIMEOUT = 60*5  # five minutes
 
-SHUTDOWN_TIMEOUT = 600 # ten min 25  # 60*15  # 15 minutes after acc off to shutdown system
+SHUTDOWN_TIMEOUT = 60*15 # 15 minutes after acc off to shutdown system
 
 WAKE_TIMES = [  # (hour, minute) tuples for rtc wake alarms
-    (7, 30),  # Morning commute
-    (16, 0),  # Evening commute
+    '7:30',  # Morning commute
+    '11:00',  # Lunch
+    '16:00',  # Evening commute
 ]
+
 # GPIO Pins that have buttons connected
 # Buttons should connect to ground and a gpio.  
 # They're pulled high and pressed when connected to ground.
@@ -61,7 +63,7 @@ NAMES = ['play', 'esc', 'mute', 'br_up', 'br_dn', 'vl_up', 'vl_dn']
 # These map to the button pins and names above.
 HU_ACTIONS = ['now_playing_toggle_play',
               'equalizer_preset_settings',
-              'go_back',
+              'resume_android_auto_projection',  # 'go_back',
               'display_brightness_up',
               'display_brightness_down',
               'output_volume_up',
@@ -119,8 +121,9 @@ def get_press_func(pin, name, client, actionstr):
 
     return on_press
 
-def set_wake_alarms():
+def set_next_rtc_wake_timer():
     '''set rtc wake alarm for next wake time'''
+
 
 
 
@@ -199,6 +202,17 @@ def main():
     '''Main function'''
     global BUTTON_PRESSED
 
+    # Wait for hudiy to start
+    while True:
+        try:
+            sp.check_call(['pgrep', '-f', 'hudiy'])
+            break
+        except sp.CalledProcessError:
+            LOG.info("Waiting for hudiy to start...")
+            time.sleep(5)
+    LOG.info("hudiy is running, continuing...")
+    time.sleep(10)  # wait a bit more for hudiy to be ready
+
     # Connection to hudiy
     client = Client("HUDIY Discovery II")
     event_handler = EventHandler()
@@ -241,6 +255,7 @@ def main():
                 and (time.time() - acc_timer) > SHUTDOWN_TIMEOUT
                 and (time.time() - button_timer) > SHUTDOWN_TIMEOUT ):
             LOG.info("ACC off for too long, shutting down system")
+            client.disconnect()
             # LOG.debug(f"Buttom_timer: {button_timer}, acc_timer: {acc_timer}, now: {time.time()}")
             sp.Popen(['sudo', 'shutdown', '-h', 'now'])
             time.sleep(10)
