@@ -34,7 +34,9 @@ import subprocess as sp
 
 # This is the path I have for the official touchscreen two on pi os trixie.  
 # You may need to change it for your system.
-BL_PATH = '/sys/class/backlight/11-0045'
+#BL_PATH = '/sys/class/backlight/11-0045'
+#BL_PATH = '/sys/class/backlight/10-0045'
+BL_PATH = '/sys/class/backlight/panel_backlight@1'
 
 ACC_PIN = 4  # GPIO pin connected to optocopuple for car ACC line
 ACC = InputDevice(ACC_PIN, pull_up=True)  # , bounce_time=0.05)  # pulled high, goes low when ACC on
@@ -43,8 +45,10 @@ AMP = OutputDevice(AMP_PIN, active_high=True, initial_value=False)
 
 BUTTON_PRESSED = False  # Tracker that lets us activate display for period of time on button press
 BUTTON_TIMEOUT = 60*5  # five minutes
+#BUTTON_TIMEOUT = 30  # five minutes
 
-SHUTDOWN_TIMEOUT = 60*15 # 15 minutes after acc off to shutdown system
+SHUTDOWN_TIMEOUT = 60*60 # 1 hour after acc off to shutdown system
+#SHUTDOWN_TIMEOUT = 45 # 15 minutes after acc off to shutdown system
 
 WAKE_TIMES = [  # (hour, minute) tuples for rtc wake alarms
     '7:30',  # Morning commute
@@ -211,7 +215,7 @@ def main():
             LOG.info("Waiting for hudiy to start...")
             time.sleep(5)
     LOG.info("hudiy is running, continuing...")
-    time.sleep(10)  # wait a bit more for hudiy to be ready
+    time.sleep(15)  # wait a bit more for hudiy to be ready
 
     # Connection to hudiy
     client = Client("HUDIY Discovery II")
@@ -257,7 +261,8 @@ def main():
             LOG.info("ACC off for too long, shutting down system")
             client.disconnect()
             # LOG.debug(f"Buttom_timer: {button_timer}, acc_timer: {acc_timer}, now: {time.time()}")
-            sp.Popen(['sudo', 'shutdown', '-h', 'now'])
+            # sp.Popen(['sudo', 'shutdown', '-h', 'now'])
+            sp.Popen(['sudo', 'halt'])
             time.sleep(10)
             break
 

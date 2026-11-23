@@ -208,3 +208,9 @@ __marimo__/
 
 # other stuff
 *.swp
+
+# runtime lock file
+taco_truck.mutex
+
+# offline map app, its own repo: github.com/a8ksh4/taco_osm_map
+osm_map/
