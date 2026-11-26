@@ -313,6 +313,19 @@ def main():
     '''Main function'''
     global BUTTON_PRESSED
 
+    # Booting with the truck off (e.g. an RTC wake): keep the screen dark and
+    # the amp off (AMP starts off) until a button press or ACC on.
+    if not ACC.is_active:
+        LOG.info("Started with ACC off, keeping display and amp off")
+        display_power(on=False)
+
+    # Remember button presses while waiting for hudiy; real handlers come later
+    def early_press():
+        global BUTTON_PRESSED
+        BUTTON_PRESSED = True
+    for butt in BUTTONS:
+        butt.when_pressed = early_press
+
     # Wait for hudiy to start
     while True:
         try:
@@ -337,7 +350,9 @@ def main():
         butt.when_pressed = get_press_func(pin, name, client, action)
 
     print("Main loop starting...")
-    button_timer = time.time() # in seconds
+    if not ACC.is_active and not BUTTON_PRESSED:
+        display_power(on=False)  # in case hudiy turned it back on while starting
+    button_timer = 0  # in seconds; startup is not a button press
     acc_last_state = ACC.is_active
     acc_timer = time.time()  # in seconds
     last_day = None  # sun state last applied
